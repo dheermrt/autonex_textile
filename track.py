@@ -1,9 +1,14 @@
 import cv2
 from ultralytics import YOLO
 from deep_sort_realtime.deepsort_tracker import DeepSort
+import torch
 
 # Load YOLO model (replace with your custom textile model if needed)
 model = YOLO("textile_model_worker1.pt")
+if torch.cuda.is_available():
+    model.to('cuda:0')
+else:
+    print("WARNING: CUDA not available, running on CPU")
 
 # Initialize DeepSORT tracker
 tracker = DeepSort(max_age=30, n_init=2, nms_max_overlap=1.0)
@@ -14,7 +19,7 @@ cap = cv2.VideoCapture(video_path)
 
 # Counting variables
 enter_count, exit_count = 0, 0
-
+ 
 workers={}
 while True:
     ret, frame = cap.read()
@@ -90,3 +95,5 @@ for (id,numbers) in workers.items():
     print("ID:",id,"Count:",numbers)
 print("Final Entered:", enter_count)
 print("Final Exited:", exit_count)
+
+ 
