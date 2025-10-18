@@ -1,0 +1,52 @@
+For installing TORCH for jetson devices 
+export TORCH_INSTALL=https://developer.download.nvidia.com/compute/redist/jp/v511/pytorch/torch-2.0.0+nv23.05-cp38-cp38-linux_aarch64.whl
+python3 -m pip install --upgrade pip
+python3 -m pip install numpy
+python3 -m pip install --no-cache $TORCH_INSTALL
+Use this method as torch for jetson is different 
+
+While installing ultralytics use 
+pip install ultralytics --no-deps 
+and then install dependencies manualy so that ultralytics doesn't fuck with the torch version you just installed 
+For install torchvision use this 
+pip install https://github.com/ultralytics/assets/releases/download/v0.0.0/torchvision-0.17.2+c1d70fe-cp38-cp38-linux_aarch64.whl
+
+There is also documentation available at 
+https://docs.ultralytics.com/guides/nvidia-jetson/?utm_source=chatgpt.com#install-ultralytics-package_1
+
+If you have a bad nvidia-kernel error first put 
+sudo apt-mark hold nvidia-l4t-kernel nvidia-l4t-kernel-headers nvidia-l4t-display-kernel nvidia-l4t-kernel-dtbs
+This will hold the update or checking of kernel when you want to install something 
+
+sudo apt update
+sudo apt install -y nvidia-l4t-cuda nvidia-l4t-cuda-utils
+sudo apt install -y libcudnn8 libcudnn8-dev
+sudo apt install -y libnvinfer8 libnvinfer-dev
+This will ensure you have installed only necessary CUDA
+
+sudo apt-mark unhold nvidia-l4t-kernel nvidia-l4t-kernel-headers nvidia-l4t-display-kernel nvidia-l4t-kernel-dtbs
+This is for unholding the nvidia kernel if ever necessary 
+
+ls /usr/local
+This is to check if CUDA is installed on the system 
+If it is installed and you are still getting error you need to add cuda to your PATH variable:-
+ls /usr/local/cuda-11.4/bin/nvcc
+First check whether nvcc is installed 
+echo '' >> ~/.bashrc
+echo '# CUDA toolkit paths' >> ~/.bashrc
+echo 'export PATH=/usr/local/cuda-11.4/bin:$PATH' >> ~/.bashrc
+echo 'export LD_LIBRARY_PATH=/usr/local/cuda-11.4/lib64:$LD_LIBRARY_PATH' >> ~/.bashrc
+
+# Reload the shell settings
+source ~/.bashrc
+This is to update Path 
+
+Now check nvcc --version
+
+Some other packages you need 
+deep_sort_realtime
+
+(venv) jetson@Jetson:~/autonex_textile$ python3 track.py 
+WARNING ⚠️ torchvision==0.17 is incompatible with torch==2.0.
+Run 'pip install torchvision==0.15' to fix torchvision or 'pip install -U torch torchvision' to update both.
+For a full compatibility table see https://github.com/pytorch/vision#installation

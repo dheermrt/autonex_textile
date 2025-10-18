@@ -9,7 +9,7 @@ model = YOLO("textile_model_worker1.pt")
 tracker = DeepSort(max_age=30, n_init=2, nms_max_overlap=1.0)
 
 # Open video
-video_path = "shorter.mkv"
+video_path = "short.mkv"
 cap = cv2.VideoCapture(video_path)
 
 # Counting variables
