@@ -86,14 +86,14 @@ while True:
             else:
                 enter_count += 1
 
-    # Draw counting line
-    cv2.line(frame, (0, line_y), (frame.shape[1], line_y), (255, 0, 0), 2)
+    # # Draw counting line
+    # cv2.line(frame, (0, line_y), (frame.shape[1], line_y), (255, 0, 0), 2)
 
-    # Display counts
-    cv2.putText(frame, f"Entered: {enter_count}", (20, 30),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
-    cv2.putText(frame, f"Exited: {exit_count}", (20, 60),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+    # # Display counts
+    # cv2.putText(frame, f"Entered: {enter_count}", (20, 30),
+    #             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+    # cv2.putText(frame, f"Exited: {exit_count}", (20, 60),
+    #             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
 
     cv2.imshow("YOLO + DeepSORT", frame)
 
