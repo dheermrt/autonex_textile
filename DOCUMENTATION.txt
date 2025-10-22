@@ -50,3 +50,6 @@ deep_sort_realtime
 WARNING ⚠️ torchvision==0.17 is incompatible with torch==2.0.
 Run 'pip install torchvision==0.15' to fix torchvision or 'pip install -U torch torchvision' to update both.
 For a full compatibility table see https://github.com/pytorch/vision#installation
+
+Currently:-
+inbuilt.py is the best method 
