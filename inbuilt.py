@@ -33,8 +33,8 @@ while True:
     if not ret:
         break
     
-    frame = cv2.resize(frame, (640, 360))
     
+    frame = cv2.resize(frame, (640, 360))
     # Use YOLO's built-in tracking (ByteTrack by default)
     results = model.track(
         frame, 
@@ -42,7 +42,8 @@ while True:
         verbose=False, 
         persist=True,  # Maintain tracks across frames
         tracker="bytetrack.yaml",  # Can also use "botsort.yaml"
-        half=True
+        half=True,
+        device=0
     )[0]
     
     line_y = int((360 / 2) - 60)
@@ -103,8 +104,8 @@ while True:
                 cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
     cv2.putText(frame, f"Exited: {exit_count}", (20, 60),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
-    cv2.putText(frame, "Method: YOLO ByteTrack", (20, 120),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+    # cv2.putText(frame, "Method: YOLO ByteTrack", (20, 120),
+    #             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
     
     cv2.imshow("YOLO Built-in Tracking", frame)
     

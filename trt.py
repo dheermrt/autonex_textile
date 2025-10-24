@@ -4,4 +4,4 @@ from ultralytics import YOLO
 model = YOLO("textile_model_worker1.pt")
 
 # Export the model to TensorRT format
-model.export(format="engine")  #
+model.export(format="engine",device=0,half=True)  #
