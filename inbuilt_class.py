@@ -91,13 +91,13 @@ class WorkerCounter:
                 cx, cy = int((x1 + x2) / 2), int((y1 + y2) / 2)
                 
                 # Draw bounding box and ID
+
                 cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
                 cv2.putText(frame, f"ID {track_id}", (int(x1), int(y1) - 10),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
                 cv2.circle(frame, (cx, cy), 4, (0, 0, 255), -1)
                 
-              
-                if (line_y - 5 < cy < line_y + 5) and (track_id not in self.already_tracked):
+                if (line_y-5<cy<line_y+5) and (track_id not in self.already_tracked):
                     self.exit_count +=1
                     self.already_tracked.add(track_id)
                     print(f"ID {track_id} exited. Total Exited: {self.exit_count}")
@@ -122,7 +122,7 @@ class WorkerCounter:
         """Starts the main video processing loop."""
         
         print(f"Starting tracking on {self.VIDEO_PATH} with device: {self.device}")
-        
+            
         try:
             while True:
                 # Clear tracked set periodically to allow objects to be counted again
@@ -169,8 +169,8 @@ class WorkerCounter:
         # Display info
         cv2.putText(frame, f"FPS: {self.fps:.1f}", (20, 90),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-        # cv2.putText(frame, f"Entered: {self.enter_count}", (20, 30),
-        #             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+        # # cv2.putText(frame, f"Entered: {self.enter_count}", (20, 30),
+        # #             cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
         cv2.putText(frame, f"Exited: {self.exit_count}", (20, 60),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
 
@@ -181,6 +181,7 @@ class WorkerCounter:
         
         print("\n" + "="*50)
         print("FINAL RESULTS")
+        print(self.exit_count)
         print("="*50)
         for (id, numbers) in self.workers.items():
             print(f"Non-Counted Class ID {id} Incremented Count: {numbers}")
@@ -189,10 +190,10 @@ class WorkerCounter:
         print(f"Total Frames Processed: {self.frame_count}")
         print(f"Average FPS: {avg_fps:.1f}")
         print("="*50)
- 
+
 if __name__ == "__main__":
     try:
- 
+
         MODEL_PATH = "textile_model_worker1.engine"
         VIDEO_PATH = "short.mkv"
         # 
