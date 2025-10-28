@@ -50,8 +50,10 @@ class WorkerCounter:
         self.SWITCH_SUPPRESS_T = 0.6  # suppress near-duplicate within T seconds
         self.SWITCH_SUPPRESS_R = 30   # and within R pixels
 
-        # YOLO/TensorRT setup
-        self.device = f"cuda:{device}" if torch.cuda.is_available() and device >= 0 else "cpu"
+        # YOLO/TensorRT setup -> force CPU-only
+        # Force CPU-only operation: disable mixed precision and ignore GPU device param
+        self.device = "cpu"
+        self.HALF = False
         self.model = YOLO(self.MODEL_PATH, task='detect')
 
         # Counters & per-track state
@@ -168,14 +170,15 @@ class WorkerCounter:
         """
         now = time.time()
 
+        # Run tracking on CPU only
         results = self.model.track(
             frame,
             conf=self.CONF_THRESHOLD,
             verbose=False,
             persist=True,
             tracker="bytetrack.yaml",
-            half=self.HALF,
-            device=self.DEVICE
+            half=False,
+            device="cpu"
         )[0]
 
         if results.boxes is None or results.boxes.id is None:
@@ -252,7 +255,7 @@ class WorkerCounter:
     # -------------------- App loop & UI --------------------------
 
     def run(self):
-        print(f"Starting tracking on {self.VIDEO_PATH} with device: {self.device}")
+        print(f"Starting tracking on {self.VIDEO_PATH} (CPU-only)")
         try:
             while True:
                 ret, frame = self.cap.read()
@@ -279,7 +282,7 @@ class WorkerCounter:
 
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     break
-                
+                    
 
         finally:
             self.cap.release()
@@ -316,7 +319,7 @@ class WorkerCounter:
 
 if __name__ == "__main__":
     try:
-        MODEL_PATH = "textile_model_worker1.engine"
+        MODEL_PATH = "textile_model_worker1.pt"
         VIDEO_PATH = "short.mkv"
 
         counter_app = WorkerCounter(

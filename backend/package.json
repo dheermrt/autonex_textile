@@ -1,0 +1,57 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "build:start": "tsc && node dist/index.js",
+    "dev": "nodemon",
+    "create-admin-1": "tsx src/scripts/createAdmin1.ts",
+    "create-admin-2": "tsx src/scripts/createAdmin2.ts",
+    "create-donear-admin": "tsx src/scripts/createDonear3Admin.ts",
+    "create-donear-access": "tsx src/scripts/createDonear3Access.ts",
+    "create-supermanager-0": "tsx src/scripts/createSuperManager0.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autonex/classic-autonext-dashboard-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/autonex/classic-autonext-dashboard-backend/issues"
+  },
+  "homepage": "https://github.com/autonex/classic-autonext-dashboard-backend#readme",
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/express": "^5.0.4",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/mqtt": "^0.0.34",
+    "@types/node": "^24.5.1",
+    "@types/node-cron": "^3.0.11",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "@socket.io/redis-adapter": "^8.3.0",
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "ioredis": "^5.7.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.18.1",
+    "mqtt": "^5.14.1",
+    "node-cron": "^4.2.1",
+    "socket.io": "^4.8.1",
+    "zod": "^4.1.11"
+  }
+}
