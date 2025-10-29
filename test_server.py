@@ -4,11 +4,10 @@ import threading
 import time
 import improved_class_cpu
 # Constants
-USER_ID = "68f8e95bc7d2cd724b70ea2a"
+USER_ID = "68fd4a7fd820b24858af6f10"
 SECS_INTERVAL = 5
-AREA_ID = "68f911dc869c33d3a765eb4a"
-TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGY4ZTk1YmM3ZDJjZDcyNGI3ZGM3MGVhMmEiLCJlbWFpbCI6ImFkbWluMkBnbWFpbC5jb20iLCJpYXQiOjE3NjEyODc4MzN9.Ce0hangobE2aHIg6eUbKQRD1fvfaXwfpKMJK1eyr03Q"
-
+AREA_ID = "6901021047444018929b5401"
+TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGZkNGE3ZmQ4MjBiMjQ4NThhZjZmMTAiLCJlbWFpbCI6InN1cGVyX21hbmFnZXJfMEBnbWFpbC5jb20iLCJpYXQiOjE3NjE1NzA1NTR9.cP-7ZuWOYRRvxQLmIAnga9xGWFev9VgSvAm8iLkTAOk"
 # Path/config for WorkerCounter (adjust to your environment)
 MODEL_PATH = "textile_model_worker1.pt"
 VIDEO_PATH = "short.mkv"
@@ -55,8 +54,10 @@ def send_periodic_workers(client, area_id):
             data = {
                 "userId": USER_ID,
                 "areaId": area_id,
-                "workers": workers_snapshot,
-                "exit_count": exit_count,
+                # "workers": workers_snapshot,
+                "rcpm": counter_app.rcpm,
+                "count": exit_count,
+                "rollsIn": random.randint(1,10),
                 "ts": int(time.time())
             }
         else:
@@ -102,12 +103,17 @@ def error(error):
 def disconnect():
     print("Socket disconnected")
 
+def auth_handler(auth):
+    """Authentication callback for Socket.IO connection"""
+    return {"token": TOKEN}
+
 # Connect to server
 try:
     sio.connect(
         "https://classic-autonext-dashboard-backend-production-002f.up.railway.app/",
         transports=["websocket", "polling"],
         headers={"Authorization": f"Bearer {TOKEN}"},
+        auth={"token": TOKEN},  # Changed from static dict to callback function
         wait_timeout=5
     )
 except Exception as e:

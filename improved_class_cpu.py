@@ -3,6 +3,7 @@ from ultralytics import YOLO
 import torch
 import time
 from collections import defaultdict, deque
+import random
 
 
 class WorkerCounter:
@@ -31,6 +32,8 @@ class WorkerCounter:
         self.CONF_THRESHOLD = conf_threshold
         self.HALF = half
         self.DEVICE = device
+        #FOR NOW I AM SENDING RANDOM RCPM DATA 
+        self.rcpm=random.randint(0,10)
 
         # I/O & resize
         self.TARGET_W, self.TARGET_H = 640, 360
