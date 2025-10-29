@@ -9,7 +9,7 @@ SECS_INTERVAL = 5
 AREA_ID = "6901021047444018929b5401"
 TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGZkNGE3ZmQ4MjBiMjQ4NThhZjZmMTAiLCJlbWFpbCI6InN1cGVyX21hbmFnZXJfMEBnbWFpbC5jb20iLCJpYXQiOjE3NjE1NzA1NTR9.cP-7ZuWOYRRvxQLmIAnga9xGWFev9VgSvAm8iLkTAOk"
 # Path/config for WorkerCounter (adjust to your environment)
-MODEL_PATH = "textile_model_worker1.pt"
+MODEL_PATH = "textile_model_worker1.engine"
 VIDEO_PATH = "short.mkv"
 
 # Create Socket.IO client
@@ -110,7 +110,7 @@ def auth_handler(auth):
 # Connect to server
 try:
     sio.connect(
-        "https://classic-autonext-dashboard-backend-production-002f.up.railway.app/",
+        "https://classic-autonext-dashboard-backend-production-002f.up.railway.app",
         transports=["websocket", "polling"],
         headers={"Authorization": f"Bearer {TOKEN}"},
         auth={"token": TOKEN},  # Changed from static dict to callback function
