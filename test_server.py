@@ -2,7 +2,7 @@ import socketio
 import random
 import threading
 import time
-import improved_class_cpu
+import improved_class
 # Constants
 USER_ID = "68fd4a7fd820b24858af6f10"
 SECS_INTERVAL = 5
@@ -23,7 +23,7 @@ def start_counter():
     """Instantiate WorkerCounter and run it in a background thread."""
     global counter_app
     try:
-        counter_app = improved_class_cpu.WorkerCounter(
+        counter_app = improved_class.WorkerCounter(
             model_path=MODEL_PATH,
             video_path=VIDEO_PATH,
             line_offset=60,
