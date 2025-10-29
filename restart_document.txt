@@ -1,0 +1,21 @@
+ 
+
+ 
+ 
+ 
+ 
+ sudo nano /etc/systemd/system/booter.service 
+
+ This contains the config file to start the job 
+sudo systemctl daemon-reload
+ This reloads the daemon
+
+ sudo systemctl restart booter.service 
+ This is used to restart the job 
+
+ sudo systemctl status booter.service 
+ Use this to check status
+  
+    journalctl -u booter.service -b
+
+Use this to check the live logs of the program 

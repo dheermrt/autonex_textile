@@ -26,6 +26,7 @@ class WorkerCounter:
                  half=True,
                  device=0):
         # Config
+        self.show=True
         self.MODEL_PATH = model_path
         self.VIDEO_PATH = video_path
         self.LINE_OFFSET = line_offset
@@ -209,10 +210,11 @@ class WorkerCounter:
             w, h = (x2 - x1), (y2 - y1)
 
             # Draw (optional)
-            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-            cv2.putText(frame, f"ID {track_id}", (int(x1), int(y1) - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-            cv2.circle(frame, (int(cx), int(cy)), 4, (0, 0, 255), -1)
+            if(self.show):
+                cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+                cv2.putText(frame, f"ID {track_id}", (int(x1), int(y1) - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                cv2.circle(frame, (int(cx), int(cy)), 4, (0, 0, 255), -1)
 
             # Update per-track state
             st = self._update_track_state(track_id, cx, cy, w, h, now)
@@ -270,25 +272,26 @@ class WorkerCounter:
 
                 # Process
                 self._process_frame(frame, line_y)  
-
-                # Draw main line and hysteresis band
-                cv2.line(frame, (0, line_y), (frame.shape[1], line_y), (255, 0, 0), 2)
-                # Hysteresis band (visual aid)
-                cv2.line(frame, (0, line_y - self.HYSTERESIS), (frame.shape[1], line_y - self.HYSTERESIS), (255, 255, 0), 1)
-                cv2.line(frame, (0, line_y + self.HYSTERESIS), (frame.shape[1], line_y + self.HYSTERESIS), (255, 255, 0), 1)
+                if(self.show):
+                    # Draw main line and hysteresis band
+                    cv2.line(frame, (0, line_y), (frame.shape[1], line_y), (255, 0, 0), 2)
+                    # Hysteresis band (visual aid)
+                    cv2.line(frame, (0, line_y - self.HYSTERESIS), (frame.shape[1], line_y - self.HYSTERESIS), (255, 255, 0), 1)
+                    cv2.line(frame, (0, line_y + self.HYSTERESIS), (frame.shape[1], line_y + self.HYSTERESIS), (255, 255, 0), 1)
 
                 # UI overlays
                 self._update_and_display_info(frame)
-                
-                cv2.imshow("YOLO ByteTrack - Robust Line Counter", frame)
+                if(self.show):
+                    cv2.imshow("YOLO ByteTrack - Robust Line Counter", frame)
 
-                if cv2.waitKey(1) & 0xFF == ord("q"):
-                    break
+                    if cv2.waitKey(1) & 0xFF == ord("q"):
+                        break
                 
 
         finally:
-            self.cap.release()
-            cv2.destroyAllWindows()
+            if(self.show):
+                self.cap.release()
+                cv2.destroyAllWindows()
             self._print_final_results()
 
     def _update_and_display_info(self, frame):
@@ -300,10 +303,11 @@ class WorkerCounter:
             self.start_time = time.time()
 
         # HUD
-        cv2.putText(frame, f"FPS: {self.fps:.1f}", (20, 90),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-        cv2.putText(frame, f"Exited: {self.exit_count}", (20, 60),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+        if(self.show):
+            cv2.putText(frame, f"FPS: {self.fps:.1f}", (20, 90),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+            cv2.putText(frame, f"Exited: {self.exit_count}", (20, 60),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
 
     def _print_final_results(self):
         total_time = time.time() - self.start_time if self.frame_count > 0 else 0

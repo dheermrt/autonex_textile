@@ -53,3 +53,5 @@ For a full compatibility table see https://github.com/pytorch/vision#installatio
 
 Currently:-
 inbuilt.py is the best method 
+
+and improved_class.py is being used by test_server.py
