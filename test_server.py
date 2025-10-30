@@ -57,7 +57,7 @@ def send_periodic_workers(client, area_id):
                 # "workers": workers_snapshot,
                 "rcpm": counter_app.rcpm,
                 "count": exit_count,
-                "rollsIn": random.randint(exit_count,exit_count+10),
+                "rollsIn": random.randint(exit_count-10,exit_count),
                 "ts": int(time.time())
             }
         else:
