@@ -89,7 +89,7 @@ def send_periodic_workers(client, area_id):
             # Fallback “fake” payload so the pipeline stays active
             count = random.randint(0, 4)
             rcpm = (60 / SECS_INTERVAL) * count
-            in_rolls = count + random.randint(0, 9)
+            in_rolls = count-random.randint(0, 9)
             data = {
                 "areaId": area_id,
                 "rcpm": rcpm,
