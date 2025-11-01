@@ -7,7 +7,7 @@ import improved_class
 
 # ------------------ Config ------------------
 USER_ID = "68fd4a7fd820b24858af6f10"
-SECS_INTERVAL = 5
+SECS_INTERVAL = 60  # send payloads every 60 seconds
 AREA_ID = "6901021047444018929b5401"
 TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGZkNGE3ZmQ4MjBiMjQ4NThhZjZmMTAiLCJlbWFpbCI6InN1cGVyX21hbmFnZXJfMEBnbWFpbC5jb20iLCJpYXQiOjE3NjE1NzA1NTR9.cP-7ZuWOYRRvxQLmIAnga9xGWFev9VgSvAm8iLkTAOk"
 
@@ -34,7 +34,7 @@ _counter_started = threading.Event()
 _sender_started = threading.Event()
 _reconnector_running = threading.Event()  # prevents multiple reconnect loops
 _stop = threading.Event()
-
+ 
 # ------------------ Helpers ------------------
 def _on_server_response(cb):
     print("workforce_2 response", cb)
@@ -74,6 +74,7 @@ def send_periodic_workers(client, area_id):
                 workers_snapshot = dict(counter_app.workers)
                 exit_count = int(counter_app.exit_count)
                 rolls_in = int(counter_app.rollsin)
+                rcpm=int(counter_app.rcpm)
             except Exception:
                 workers_snapshot = {}
                 exit_count = 0
@@ -81,7 +82,7 @@ def send_periodic_workers(client, area_id):
             data = {
                 "userId": USER_ID,
                 "areaId": area_id,
-                "rcpm": counter_app.rcpm,
+                "rcpm": rcpm,
                 "count": exit_count,
                 "rollsIn": rolls_in,
                 "ts": int(time.time())

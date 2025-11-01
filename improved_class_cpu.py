@@ -21,6 +21,7 @@ class WorkerCounter:
                  half=False,
                  device=0):
         # Config
+       
         self.MODEL_PATH = model_path
         self.VIDEO_PATH = video_path
         self.LINE_OFFSET = line_offset
@@ -31,7 +32,8 @@ class WorkerCounter:
         self.HALF = False
 
         # FOR NOW I AM SENDING RANDOM RCPM DATA
-        self.rcpm = random.randint(0, 10)
+        self.rcpm = 0
+         
 
         # I/O & resize
         self.TARGET_W, self.TARGET_H = 640, 360
@@ -58,7 +60,10 @@ class WorkerCounter:
         self.exit_count = 0
         self.workers = {}  # non-counted classes
         self.track_state = {}
-        self.recent_crossings = deque(maxlen=64)
+        
+        self.recent_crossings_exit= deque(maxlen=64)
+        self.recent_crossings_entry=deque(maxlen=64)
+        self.recent_crossings=deque(maxlen=64)
 
         # bookkeeping
         self.rollsin = 0
@@ -68,6 +73,7 @@ class WorkerCounter:
         self.fps = 0.0
         self.frame_count = 0
         self.start_time = time.time()
+        
 
         # Thread-safety for external readers
         self._lock = threading.Lock()
@@ -154,7 +160,11 @@ class WorkerCounter:
                 return True
         return False
 
-    def _register_cross(self, cx, cy, now):
+    def _register_cross_exit(self, cx, cy, now):
+        self.recent_crossings_exit.append((now, cx, cy))
+        self.recent_crossings.append((now, cx, cy))
+    def _register_cross_entry(self, cx, cy, now):
+        self.recent_crossings_entry.append((now, cx, cy))
         self.recent_crossings.append((now, cx, cy))
 
     # --------------- Main per-frame processing ----------------
@@ -174,7 +184,7 @@ class WorkerCounter:
 
         # track numbers for HUD
         try:
-            self.rollsin = len(results.boxes)
+            self.rollsin = len(results.boxes) 
         except Exception:
             self.rollsin = 0
 
@@ -240,21 +250,23 @@ class WorkerCounter:
                         with self._lock:
                             self.exit_count += 1
                             st["last_cross_time"] = now
-                            self._register_cross(cx, cy, now)
+                            self._register_cross_exit(cx, cy, now)
                             for worker in list(self.workers.keys()):
                                 self.workers[worker] += 1
                     elif down_checker:
                         with self._lock:
                             self.rollsin += 1
                             st["last_cross_time"] = now
-                            self._register_cross(cx, cy, now)
-
+                            self._register_cross_entry(cx, cy, now)
+        self.get_counts_last()
         self._purge_old_tracks(now)
         return self.get_status()["workers"]
 
     # --------------- App loop & UI ----------------
+     
 
     def run(self):
+        
         print(f"Starting tracking on {self.VIDEO_PATH} (CPU-only)")
         try:
             while True:
@@ -297,6 +309,7 @@ class WorkerCounter:
 
     def _update_and_display_info(self, frame):
         self.frame_count += 1
+
         if self.frame_count % self.FPS_UPDATE_INTERVAL == 0:
             end_time = time.time()
             self.fps = self.FPS_UPDATE_INTERVAL / (end_time - self.start_time)
@@ -335,6 +348,18 @@ class WorkerCounter:
                 "rcpm": int(self.rcpm),
                 "rollsin": int(self.rollsin),
             }
+    def get_counts_last(self):
+        """Return counts in last minute"""
+        now=time.time()
+        cutoff=now-60 
+        exit_c=0
+        for (t,px,py) in self.recent_crossings_exit:
+            if now - t <=60:
+                exit_c+=1
+            else:
+                break
+        self.rcpm=exit_c
+        return self.rcpm
 
 
 if __name__ == "__main__":

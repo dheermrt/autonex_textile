@@ -35,8 +35,10 @@ class WorkerCounter:
         self.HALF = half
         self.DEVICE = device
 
-       #FOR NOW I AM SENDING RANDOM RCPM DATA 
-        self.rcpm=random.randint(0,10) 
+        self.recent_crossings_exit= deque(maxlen=64)
+        self.recent_crossings_entry=deque(maxlen=64)
+        self.recent_crossings=deque(maxlen=64)
+        self.rcpm=0
 
         # I/O & resize
         self.TARGET_W, self.TARGET_H = 640, 360
@@ -64,8 +66,7 @@ class WorkerCounter:
         self.exit_count = 0
         self.workers = {}  # non-counted classes (kept from your original idea)
         self.track_state = {}  # tid -> dict with history, age, prev_side, last_cross_time, last_seen, last_gate_side
-        self.recent_crossings = deque(maxlen=64)  # (t, cx, cy) for ID-switch suppression
-
+         
         # FPS info
         self.fps = 0.0
         self.frame_count = 0
@@ -162,7 +163,11 @@ class WorkerCounter:
                 return True
         return False
 
-    def _register_cross(self, cx, cy, now):
+    def _register_cross_exit(self, cx, cy, now):
+        self.recent_crossings.append((now, cx, cy))
+        self.recent_crossings_exit.append((now, cx, cy))
+    def _register_cross_entry(self, cx, cy, now):
+        self.recent_crossings_entry.append((now, cx, cy))
         self.recent_crossings.append((now, cx, cy))
 
     # --------------- Main per-frame processing -------------------
@@ -256,14 +261,15 @@ class WorkerCounter:
                     if(up_checker):
                         self.exit_count += 1
                         st["last_cross_time"] = now
-                        self._register_cross(cx, cy, now)
+                        self._register_cross_exit(cx, cy, now)
                         for worker in self.workers.keys():
                             self.workers[worker] += 1
                             print(f"Worker {worker} incremented. His output {self.workers[worker]}")
                     elif(down_checker):
                         self.rollsin+=1
                         st["last_cross_time"] = now
-                        self._register_cross(cx, cy, now)
+                        self._register_cross_entry(cx, cy, now)
+        self.get_counts_last()
 
         self._purge_old_tracks(now)
         return self.workers
@@ -306,6 +312,8 @@ class WorkerCounter:
                 cv2.destroyAllWindows()
             self._print_final_results()
 
+    
+
     def _update_and_display_info(self, frame):
         # FPS
         self.frame_count += 1
@@ -336,7 +344,20 @@ class WorkerCounter:
         print(f"Average FPS: {avg_fps:.1f}")
         print("=" * 50)
 
-
+    def get_counts_last(self):
+        """Return counts in last minute"""
+        now=time.time()
+        cutoff=now-60 
+        exit_c=0
+        for (t,px,py) in self.recent_crossings_exit:
+            if now - t <=60:
+                exit_c+=1
+            else:
+                break
+        self.rcpm=exit_c
+        if(self.rcpm>0):
+            print(self.rcpm)
+        return self.rcpm
 if __name__ == "__main__":
     try:
         MODEL_PATH = "textile_model_worker1.engine"
