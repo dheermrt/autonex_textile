@@ -73,6 +73,7 @@ def send_periodic_workers(client, area_id):
             try:
                 workers_snapshot = dict(counter_app.workers)
                 exit_count = int(counter_app.exit_count)
+                rolls_in = int(counter_app.rollsin)
             except Exception:
                 workers_snapshot = {}
                 exit_count = 0
@@ -82,7 +83,7 @@ def send_periodic_workers(client, area_id):
                 "areaId": area_id,
                 "rcpm": counter_app.rcpm,
                 "count": exit_count,
-                "rollsIn": random.randint(exit_count-10,exit_count),
+                "rollsIn": rolls_in,
                 "ts": int(time.time())
             }
         else:

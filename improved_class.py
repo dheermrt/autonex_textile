@@ -26,7 +26,7 @@ class WorkerCounter:
                  half=True,
                  device=0):
         # Config
-        self.show=True
+        self.show=False
         self.MODEL_PATH = model_path
         self.VIDEO_PATH = video_path
         self.LINE_OFFSET = line_offset
@@ -70,7 +70,7 @@ class WorkerCounter:
         self.fps = 0.0
         self.frame_count = 0
         self.start_time = time.time()
-
+        self.rollsin=0
         # Video capture
         self.cap = cv2.VideoCapture(self.VIDEO_PATH)
         if not self.cap.isOpened():
@@ -183,7 +183,7 @@ class WorkerCounter:
             half=self.HALF,
             device=self.DEVICE
         )[0]
-
+        self.rollsin=len(results.boxes)
         if results.boxes is None or results.boxes.id is None:
             self._purge_old_tracks(now)
             return self.workers
@@ -229,9 +229,16 @@ class WorkerCounter:
             side_prev = st["prev_side"]
             if side_now != 0:
                 st["prev_side"] = side_now  # keep last non-zero
-
+            down_checker=False
+            up_checker=False
             # Must have a side change across the hysteresis band
             crossed_band = (side_prev is not None) and (side_now != 0) and (side_prev != side_now)
+            if(crossed_band):
+                if(side_prev == -1 and side_now == 1):
+                    down_checker=True
+                elif(side_prev == 1 and side_now == -1):
+                    up_checker=True
+                    
 
             # Gate logic (ordered pass)
             gate_ok = self._gate_pair_pass(st, side_now)
@@ -246,12 +253,17 @@ class WorkerCounter:
             if crossed_band and gate_ok and speed_ok and travel_ok and cooldown_ok:
                 # suppress near-duplicate due to ID switch at the line
                 if not self._switch_suppress(cx, cy, now):
-                    self.exit_count += 1
-                    st["last_cross_time"] = now
-                    self._register_cross(cx, cy, now)
-                    for worker in self.workers.keys():
-                        self.workers[worker] += 1
-                        print(f"Worker {worker} incremented. His output {self.workers[worker]}")
+                    if(up_checker):
+                        self.exit_count += 1
+                        st["last_cross_time"] = now
+                        self._register_cross(cx, cy, now)
+                        for worker in self.workers.keys():
+                            self.workers[worker] += 1
+                            print(f"Worker {worker} incremented. His output {self.workers[worker]}")
+                    elif(down_checker):
+                        self.rollsin+=1
+                        st["last_cross_time"] = now
+                        self._register_cross(cx, cy, now)
 
         self._purge_old_tracks(now)
         return self.workers
@@ -308,6 +320,8 @@ class WorkerCounter:
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
             cv2.putText(frame, f"Exited: {self.exit_count}", (20, 60),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+            cv2.putText(frame, f"Rolls In: {self.rollsin}", (20, 120),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 0), 2)
 
     def _print_final_results(self):
         total_time = time.time() - self.start_time if self.frame_count > 0 else 0
