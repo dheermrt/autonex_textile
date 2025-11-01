@@ -12,7 +12,7 @@ AREA_ID = "6901021047444018929b5401"
 TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OGZkNGE3ZmQ4MjBiMjQ4NThhZjZmMTAiLCJlbWFpbCI6InN1cGVyX21hbmFnZXJfMEBnbWFpbC5jb20iLCJpYXQiOjE3NjE1NzA1NTR9.cP-7ZuWOYRRvxQLmIAnga9xGWFev9VgSvAm8iLkTAOk"
 
 MODEL_PATH = "textile_model_worker1.engine"
-VIDEO_PATH = "short.mkv"  # 0 for webcam, or RTSP URL When using Camera 
+VIDEO_PATH = "rtsp://admin:Autonex$2025@192.168.0.100:554/cam/realmonitor?channel=1&subtype=0"  # 0 for webcam, or RTSP URL When using Camera 
 
 SIO_URL = os.getenv("SIO_URL", "https://classic-autonext-dashboard-backend-production-002f.up.railway.app")
 

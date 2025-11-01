@@ -1,0 +1,229 @@
+import cv2
+from ultralytics import YOLO
+import torch
+import time
+from collections import defaultdict, deque
+import random 
+
+
+
+class WorkerCounter:
+    """
+    Object detection + ByteTrack + robust line-cross counting with anti-double-count logic:
+      - hysteresis band
+      - per-track state & cooldown
+      - optional 2-gate confirmation
+      - vertical speed & travel checks
+      - ID-switch suppression near the line
+    """
+
+    def __init__(self,
+                 model_path,
+                 video_path,
+                 line_offset=60,
+                 cls_id_to_count=1,
+                 conf_threshold=0.7,
+                 half=True,
+                 device=0):
+        # Config
+        self.show=False
+        self.MODEL_PATH = model_path
+        self.VIDEO_PATH = video_path
+        self.LINE_OFFSET = line_offset
+        self.CLS_ID_TO_COUNT = cls_id_to_count
+        self.CONF_THRESHOLD = conf_threshold
+        self.HALF = half
+        self.DEVICE = device
+
+       #FOR NOW I AM SENDING RANDOM RCPM DATA 
+        self.rcpm=random.randint(0,10) 
+
+        # I/O & resize
+        self.TARGET_W, self.TARGET_H = 640, 360
+        self.FPS_UPDATE_INTERVAL = 10
+
+        # Filter tiny/huge boxes (tune to your scene)
+        self.AREA_MIN, self.AREA_MAX = 500, 12000
+
+        # Anti-double-count knobs (tune to your FPS/scale)
+        self.HYSTERESIS = 8           # px band around line (no side changes within this)
+        self.COOLDOWN_SEC = 2.0       # same track cannot count again within this window
+        self.MIN_AGE = 0              # frames before a track is eligible
+        self.MIN_TRAVEL = 2       # px vertical travel across line (over recent history)
+        self.MIN_VY = 10.0            # px/s vertical speed magnitude
+        self.GATE_ENABLE = True       # require ordered crossing across two virtual gates
+        self.GATE_WINDOW = 150       # seconds allowed to pass both gates
+        self.SWITCH_SUPPRESS_T = 0.6  # suppress near-duplicate within T seconds
+        self.SWITCH_SUPPRESS_R = 30   # and within R pixels
+
+        # YOLO/TensorRT setup
+        self.device = f"cuda:{device}" if torch.cuda.is_available() and device >= 0 else "cpu"
+        self.model = YOLO(self.MODEL_PATH, task='detect')
+
+        # Counters & per-track state
+        self.exit_count = 0
+        self.workers = {}  # non-counted classes (kept from your original idea)
+        self.track_state = {}  # tid -> dict with history, age, prev_side, last_cross_time, last_seen, last_gate_side
+        self.recent_crossings = deque(maxlen=64)  # (t, cx, cy) for ID-switch suppression
+
+        # FPS info
+        self.fps = 0.0
+        self.frame_count = 0
+        self.start_time = time.time()
+
+        # Video capture
+        self.cap = cv2.VideoCapture(self.VIDEO_PATH)
+        if not self.cap.isOpened():
+            raise IOError(f"Cannot open video file: {self.VIDEO_PATH}")
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+    # --------------- Helpers for anti-double-count ----------------
+
+    def _line_sides(self, cy, line_y):
+        """
+        Returns: -1 if ABOVE (smaller y), +1 if BELOW (larger y), 0 if within hysteresis band.
+        """
+        if cy <= line_y - self.HYSTERESIS:
+            return -1
+        elif cy >= line_y + self.HYSTERESIS:
+            return +1
+        else:
+            return 0
+
+    def _update_track_state(self, tid, cx, cy, w, h, now):
+        st = self.track_state.get(tid)
+        if st is None:
+            st = {
+                "hist": deque(maxlen=12),  # (t, cx, cy, w, h)
+                "age": 0,
+                "prev_side": None,
+                "last_cross_time": -1e9,
+                "last_gate_side": None,
+                "last_seen": now
+            }
+            self.track_state[tid] = st
+        st["hist"].append((now, cx, cy, w, h))
+        st["age"] += 1
+        st["last_seen"] = now
+        return st
+
+    def _purge_old_tracks(self, now):
+        drop = [tid for tid, st in self.track_state.items() if now - st["last_seen"] > 3.0]
+        for tid in drop:
+            self.track_state.pop(tid, None)
+
+    def import cv2
+from ultralytics import YOLO
+import torch
+import time
+from collections import defaultdict, deque
+import random 
+
+
+
+class WorkerCounter:
+    """
+    Object detection + ByteTrack + robust line-cross counting with anti-double-count logic:
+      - hysteresis band
+      - per-track state & cooldown
+      - optional 2-gate confirmation
+      - vertical speed & travel checks
+      - ID-switch suppression near the line
+    """
+
+    def __init__(self,
+                 model_path,
+                 video_path,
+                 line_offset=60,
+                 cls_id_to_count=1,
+                 conf_threshold=0.7,
+                 half=True,
+                 device=0):
+        # Config
+        self.show=False
+        self.MODEL_PATH = model_path
+        self.VIDEO_PATH = video_path
+        self.LINE_OFFSET = line_offset
+        self.CLS_ID_TO_COUNT = cls_id_to_count
+        self.CONF_THRESHOLD = conf_threshold
+        self.HALF = half
+        self.DEVICE = device
+
+       #FOR NOW I AM SENDING RANDOM RCPM DATA 
+        self.rcpm=random.randint(0,10) 
+
+        # I/O & resize
+        self.TARGET_W, self.TARGET_H = 640, 360
+        self.FPS_UPDATE_INTERVAL = 10
+
+        # Filter tiny/huge boxes (tune to your scene)
+        self.AREA_MIN, self.AREA_MAX = 500, 12000
+
+        # Anti-double-count knobs (tune to your FPS/scale)
+        self.HYSTERESIS = 8           # px band around line (no side changes within this)
+        self.COOLDOWN_SEC = 2.0       # same track cannot count again within this window
+        self.MIN_AGE = 0              # frames before a track is eligible
+        self.MIN_TRAVEL = 2       # px vertical travel across line (over recent history)
+        self.MIN_VY = 10.0            # px/s vertical speed magnitude
+        self.GATE_ENABLE = True       # require ordered crossing across two virtual gates
+        self.GATE_WINDOW = 150       # seconds allowed to pass both gates
+        self.SWITCH_SUPPRESS_T = 0.6  # suppress near-duplicate within T seconds
+        self.SWITCH_SUPPRESS_R = 30   # and within R pixels
+
+        # YOLO/TensorRT setup
+        self.device = f"cuda:{device}" if torch.cuda.is_available() and device >= 0 else "cpu"
+        self.model = YOLO(self.MODEL_PATH, task='detect')
+
+        # Counters & per-track state
+        self.exit_count = 0
+        self.workers = {}  # non-counted classes (kept from your original idea)
+        self.track_state = {}  # tid -> dict with history, age, prev_side, last_cross_time, last_seen, last_gate_side
+        self.recent_crossings = deque(maxlen=64)  # (t, cx, cy) for ID-switch suppression
+
+        # FPS info
+        self.fps = 0.0
+        self.frame_count = 0
+        self.start_time = time.time()
+
+        # Video capture
+        self.cap = cv2.VideoCapture(self.VIDEO_PATH)
+        if not self.cap.isOpened():
+            raise IOError(f"Cannot open video file: {self.VIDEO_PATH}")
+        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+
+    # --------------- Helpers for anti-double-count ----------------
+
+    def _line_sides(self, cy, line_y):
+        """
+        Returns: -1 if ABOVE (smaller y), +1 if BELOW (larger y), 0 if within hysteresis band.
+        """
+        if cy <= line_y - self.HYSTERESIS:
+            return -1
+        elif cy >= line_y + self.HYSTERESIS:
+            return +1
+        else:
+            return 0
+
+    def _update_track_state(self, tid, cx, cy, w, h, now):
+        st = self.track_state.get(tid)
+        if st is None:
+            st = {
+                "hist": deque(maxlen=12),  # (t, cx, cy, w, h)
+                "age": 0,
+                "prev_side": None,
+                "last_cross_time": -1e9,
+                "last_gate_side": None,
+                "last_seen": now
+            }
+            self.track_state[tid] = st
+        st["hist"].append((now, cx, cy, w, h))
+        st["age"] += 1
+        st["last_seen"] = now
+        return st
+
+    def _purge_old_tracks(self, now):
+        drop = [tid for tid, st in self.track_state.items() if now - st["last_seen"] > 3.0]
+        for tid in drop:
+            self.track_state.pop(tid, None)
+
+    def 

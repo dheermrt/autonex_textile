@@ -2,7 +2,6 @@ import cv2
 from ultralytics import YOLO
 import torch
 import time
-import threading
 from collections import defaultdict, deque
 import random 
 
@@ -19,13 +18,13 @@ class WorkerCounter:
     """
 
     def __init__(self,
-                  model_path,
-                  video_path,
-                  line_offset=60,
-                  cls_id_to_count=1,
-                  conf_threshold=0.7,
-                  half=True,
-                  device=0):
+                 model_path,
+                 video_path,
+                 line_offset=60,
+                 cls_id_to_count=1,
+                 conf_threshold=0.7,
+                 half=True,
+                 device=0):
         # Config
         self.show=False
         self.MODEL_PATH = model_path
@@ -36,11 +35,8 @@ class WorkerCounter:
         self.HALF = half
         self.DEVICE = device
 
-        # increase history so 60s window kept under higher rates
-        self.recent_crossings_exit = deque(maxlen=4096)
-        self.recent_crossings_entry = deque(maxlen=4096)
-        self.recent_crossings = deque(maxlen=4096)
-        self.rcpm=0
+       #FOR NOW I AM SENDING RANDOM RCPM DATA 
+        self.rcpm=random.randint(0,10) 
 
         # I/O & resize
         self.TARGET_W, self.TARGET_H = 640, 360
@@ -68,24 +64,18 @@ class WorkerCounter:
         self.exit_count = 0
         self.workers = {}  # non-counted classes (kept from your original idea)
         self.track_state = {}  # tid -> dict with history, age, prev_side, last_cross_time, last_seen, last_gate_side
-         
+        self.recent_crossings = deque(maxlen=64)  # (t, cx, cy) for ID-switch suppression
+
         # FPS info
         self.fps = 0.0
         self.frame_count = 0
         self.start_time = time.time()
-        self.rollsin=0
+
         # Video capture
         self.cap = cv2.VideoCapture(self.VIDEO_PATH)
         if not self.cap.isOpened():
             raise IOError(f"Cannot open video file: {self.VIDEO_PATH}")
         self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        # Frame reader thread to avoid blocking/skipped frames on RTSP
-        self._lock = threading.Lock()
-        self._last_frame = None
-        self._last_frame_ts = 0.0
-        self._reader_stop = threading.Event()
-        self._grab_thread = threading.Thread(target=self._frame_reader, daemon=True)
-        self._grab_thread.start()
 
     # --------------- Helpers for anti-double-count ----------------
 
@@ -171,26 +161,8 @@ class WorkerCounter:
             if (abs(px - cx) <= self.SWITCH_SUPPRESS_R) and (abs(py - cy) <= self.SWITCH_SUPPRESS_R):
                 return True
         return False
-    
-    def _frame_reader(self):
-        """Continuously read frames from the capture and keep the latest frame only."""
-        while not self._reader_stop.is_set():
-            try:
-                ret, frame = self.cap.read()
-                if not ret:
-                    time.sleep(0.01)
-                    continue
-                with self._lock:
-                    self._last_frame = frame
-                    self._last_frame_ts = time.time()
-            except Exception:
-                time.sleep(0.05)
 
-    def _register_cross_exit(self, cx, cy, now):
-        self.recent_crossings.append((now, cx, cy))
-        self.recent_crossings_exit.append((now, cx, cy))
-    def _register_cross_entry(self, cx, cy, now):
-        self.recent_crossings_entry.append((now, cx, cy))
+    def _register_cross(self, cx, cy, now):
         self.recent_crossings.append((now, cx, cy))
 
     # --------------- Main per-frame processing -------------------
@@ -211,7 +183,7 @@ class WorkerCounter:
             half=self.HALF,
             device=self.DEVICE
         )[0]
-        self.rollsin=len(results.boxes)
+
         if results.boxes is None or results.boxes.id is None:
             self._purge_old_tracks(now)
             return self.workers
@@ -257,16 +229,9 @@ class WorkerCounter:
             side_prev = st["prev_side"]
             if side_now != 0:
                 st["prev_side"] = side_now  # keep last non-zero
-            down_checker=False
-            up_checker=False
+
             # Must have a side change across the hysteresis band
             crossed_band = (side_prev is not None) and (side_now != 0) and (side_prev != side_now)
-            if(crossed_band):
-                if(side_prev == -1 and side_now == 1):
-                    down_checker=True
-                elif(side_prev == 1 and side_now == -1):
-                    up_checker=True
-                    
 
             # Gate logic (ordered pass)
             gate_ok = self._gate_pair_pass(st, side_now)
@@ -281,18 +246,12 @@ class WorkerCounter:
             if crossed_band and gate_ok and speed_ok and travel_ok and cooldown_ok:
                 # suppress near-duplicate due to ID switch at the line
                 if not self._switch_suppress(cx, cy, now):
-                    if(up_checker):
-                        self.exit_count += 1
-                        st["last_cross_time"] = now
-                        self._register_cross_exit(cx, cy, now)
-                        for worker in self.workers.keys():
-                            self.workers[worker] += 1
-                            print(f"Worker {worker} incremented. His output {self.workers[worker]}")
-                    elif(down_checker):
-                        self.rollsin+=1
-                        st["last_cross_time"] = now
-                        self._register_cross_entry(cx, cy, now)
-        self.get_counts_last()
+                    self.exit_count += 1
+                    st["last_cross_time"] = now
+                    self._register_cross(cx, cy, now)
+                    for worker in self.workers.keys():
+                        self.workers[worker] += 1
+                        print(f"Worker {worker} incremented. His output {self.workers[worker]}")
 
         self._purge_old_tracks(now)
         return self.workers
@@ -301,58 +260,38 @@ class WorkerCounter:
 
     def run(self):
         print(f"Starting tracking on {self.VIDEO_PATH} with device: {self.device}")
-        prev_ts = 0.0
         try:
             while True:
-                with self._lock:
-                    frame = None if self._last_frame is None else self._last_frame.copy()
-                    ts = float(self._last_frame_ts)
-
-                if frame is None:
-                    time.sleep(0.01)
-                    continue
-
-                # skip if same frame as previously processed
-                if ts == prev_ts:
-                    time.sleep(0.005)
-                    continue
-                prev_ts = ts
+                ret, frame = self.cap.read()
+                if not ret:
+                    break
 
                 # Pre-process
                 frame = cv2.resize(frame, (self.TARGET_W, self.TARGET_H))
                 line_y = int((self.TARGET_H / 2) - self.LINE_OFFSET)
 
                 # Process
-                self._process_frame(frame, line_y)
-
-                if self.show:
+                self._process_frame(frame, line_y)  
+                if(self.show):
                     # Draw main line and hysteresis band
                     cv2.line(frame, (0, line_y), (frame.shape[1], line_y), (255, 0, 0), 2)
+                    # Hysteresis band (visual aid)
                     cv2.line(frame, (0, line_y - self.HYSTERESIS), (frame.shape[1], line_y - self.HYSTERESIS), (255, 255, 0), 1)
                     cv2.line(frame, (0, line_y + self.HYSTERESIS), (frame.shape[1], line_y + self.HYSTERESIS), (255, 255, 0), 1)
-                    self._update_and_display_info(frame)
+
+                # UI overlays
+                self._update_and_display_info(frame)
+                if(self.show):
                     cv2.imshow("YOLO ByteTrack - Robust Line Counter", frame)
+
                     if cv2.waitKey(1) & 0xFF == ord("q"):
                         break
-                else:
-                    # keep HUD counters updated even in headless mode
-                    self._update_and_display_info(frame)
+                
+
         finally:
-            # stop reader thread cleanly
-            try:
-                self._reader_stop.set()
-                if hasattr(self, "_grab_thread") and self._grab_thread.is_alive():
-                    self._grab_thread.join(timeout=0.5)
-            except Exception:
-                pass
-            try:
+            if(self.show):
                 self.cap.release()
-            except Exception:
-                pass
-            try:
                 cv2.destroyAllWindows()
-            except Exception:
-                pass
             self._print_final_results()
 
     def _update_and_display_info(self, frame):
@@ -369,8 +308,6 @@ class WorkerCounter:
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
             cv2.putText(frame, f"Exited: {self.exit_count}", (20, 60),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
-            cv2.putText(frame, f"Rolls In: {self.rollsin}", (20, 120),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 0), 2)
 
     def _print_final_results(self):
         total_time = time.time() - self.start_time if self.frame_count > 0 else 0
@@ -385,22 +322,11 @@ class WorkerCounter:
         print(f"Average FPS: {avg_fps:.1f}")
         print("=" * 50)
 
-    def get_counts_last(self):
-        """Return counts in last minute (thread-safe-ish, iterates newest-first)."""
-        now = time.time()
-        cutoff = now - 60
-        exit_c = 0
-        # iterate from newest to oldest and stop when older than cutoff
-        for (t, _px, _py) in reversed(self.recent_crossings_exit):
-            if t < cutoff:
-                break
-            exit_c += 1
-        self.rcpm = exit_c
-        return self.rcpm
+
 if __name__ == "__main__":
     try:
         MODEL_PATH = "textile_model_worker1.engine"
-        VIDEO_PATH = "rtsp://admin:Autonex$2025@192.168.0.100:554/cam/realmonitor?channel=1&subtype=0"
+        VIDEO_PATH = "short.mkv"
 
         counter_app = WorkerCounter(
             model_path=MODEL_PATH,
